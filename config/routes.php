@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Handler\HomePageHandler;
+use App\Handler\TriggerGitHubEventHandler;
 use Psr\Container\ContainerInterface;
 use Zend\Expressive\Application;
 use Zend\Expressive\MiddlewareFactory;
@@ -34,5 +36,6 @@ use Zend\Expressive\MiddlewareFactory;
  */
 return function (Application $app, MiddlewareFactory $factory, ContainerInterface $container) : void {
     $app->get('/', App\Handler\HomePageHandler::class, 'home');
+    $app->post('/', TriggerGitHubEventHandler::class, 'event.trigger');
     $app->get('/api/ping', App\Handler\PingHandler::class, 'api.ping');
 };
