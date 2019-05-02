@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AppTest\Handler;
 
-use App\Handler\TriggerGitHubEventHandler;
+use App\Handler\TriggerJenkinsBuild;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Prophecy\ObjectProphecy;
 use Psr\Container\ContainerInterface;
@@ -35,7 +35,7 @@ final class TriggerGitHubEventHandlerTest extends TestCase
 
     public function testTriggersJenkinsBuildOnPush()
     {
-        $eventTriggererHandler = TriggerGitHubEventHandler::fromContainer(
+        $eventTriggererHandler = TriggerJenkinsBuild::fromContainer(
             $this->container->reveal(),
             $this->router->reveal(),
             null

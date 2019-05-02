@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Handler\HomePageHandler;
-use App\Handler\TriggerGitHubEventHandler;
+use App\Handler\TriggerJenkinsBuild;
 use Psr\Container\ContainerInterface;
 use Zend\Expressive\Application;
 use Zend\Expressive\MiddlewareFactory;
@@ -36,6 +36,6 @@ use Zend\Expressive\MiddlewareFactory;
  */
 return function (Application $app, MiddlewareFactory $factory, ContainerInterface $container) : void {
     $app->get('/', App\Handler\HomePageHandler::class, 'home');
-    $app->post('/', TriggerGitHubEventHandler::class, 'event.trigger');
+    $app->post('/', TriggerJenkinsBuild::class, 'event.trigger');
     $app->get('/api/ping', App\Handler\PingHandler::class, 'api.ping');
 };

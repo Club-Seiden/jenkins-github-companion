@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
-use App\Handler\TriggerGitHubEventHandler;
+use App\Handler\TriggerJenkinsBuild;
 
 /**
  * The configuration provider for the App module
@@ -38,7 +38,7 @@ class ConfigProvider
                 Handler\PingHandler::class => Handler\PingHandler::class,
             ],
             'factories'  => [
-                TriggerGitHubEventHandler::class => [TriggerGitHubEventHandler::class, 'fromContainer'],
+                TriggerJenkinsBuild::class => [TriggerJenkinsBuild::class, 'fromContainer'],
                 Handler\HomePageHandler::class => Handler\HomePageHandlerFactory::class,
             ],
         ];
