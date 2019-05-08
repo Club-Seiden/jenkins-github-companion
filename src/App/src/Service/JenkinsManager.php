@@ -36,6 +36,7 @@ final class JenkinsManager implements JenkinsManagerInterface
         $manager->url = $jenkinsConfig['url'];
         $manager->user = $jenkinsConfig['user'];
         $manager->password = $jenkinsConfig['password'];
+
         return $manager;
     }
 
@@ -76,13 +77,13 @@ final class JenkinsManager implements JenkinsManagerInterface
      * @param string $job
      * @return string
      */
-    public function triggerBuild(string $job): string
+    public function triggerBuild(string $job, string $branch): string
     {
         $buildEndpoint = $this->url . '/job/' . $job . '/build';
 
         $crumb = $this->getCrumb();
 
-        return $this->executeCommand("cURL -X POST $buildEndpoint --user $this->user:$this->password -H \"$crumb\"");
+        return $this->executeCommand("cURL -X POST $buildEndpoint --user $this->user:$this->password -H \"$crumb\" --data-urlencode json='{\"parameter\": [{\"name\":\"BRANCH\", \"value\":\"$branch\"}]}'");
     }
 
     /**
