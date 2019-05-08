@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Handler;
 
 use App\Repository\JenkinsJobRepositoryInterface;
+use App\Service\GithubWebhookRequestValidator;
 use App\Service\JenkinsManager;
 use App\Service\JenkinsManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -14,6 +15,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Zend\Diactoros\Response\JsonResponse;
 use Zend\Diactoros\ServerRequest;
 use Zend\Expressive\Router\RouterInterface;
+use Zend\Validator\ValidatorInterface;
+use Zend\Validator\ValidatorPluginManager;
 
 final class TriggerJenkinsBuild implements RequestHandlerInterface
 {
@@ -31,21 +34,28 @@ final class TriggerJenkinsBuild implements RequestHandlerInterface
      * @var JenkinsJobRepositoryInterface
      */
     private $jenkinsJobRepository;
+    /**
+     * @var ValidatorInterface
+     */
+    private $githubWebhookRequestValidator;
 
     /**
      * TriggerJenkinsBuild constructor.
      * @param JenkinsManagerInterface $jenkinsManager
      * @param RouterInterface $router
      * @param JenkinsJobRepositoryInterface $jenkinsJobRepository
+     * @param ValidatorInterface $githubWebhookRequestValidator
      */
     public function __construct(
         JenkinsManagerInterface $jenkinsManager,
         RouterInterface $router,
-        JenkinsJobRepositoryInterface $jenkinsJobRepository
+        JenkinsJobRepositoryInterface $jenkinsJobRepository,
+        ValidatorInterface $githubWebhookRequestValidator
     ) {
         $this->jenkinsManager = $jenkinsManager;
         $this->router = $router;
         $this->jenkinsJobRepository = $jenkinsJobRepository;
+        $this->githubWebhookRequestValidator = $githubWebhookRequestValidator;
     }
 
     /**
@@ -54,10 +64,13 @@ final class TriggerJenkinsBuild implements RequestHandlerInterface
      */
     public static function fromContainer(ContainerInterface $container): self
     {
+        $validatorPluginManager = $container->get(ValidatorPluginManager::class);
+        $gitHubWebHookRequestValidator = $validatorPluginManager->get(GithubWebhookRequestValidator::class);
         return new self(
             $container->get(JenkinsManager::class),
             $container->get(RouterInterface::class),
-            $container->get(JenkinsJobRepositoryInterface::class)
+            $container->get(JenkinsJobRepositoryInterface::class),
+            $container->get(ValidatorPluginManager::class)->get(GithubWebhookRequestValidator::class)
         );
     }
 
@@ -71,7 +84,9 @@ final class TriggerJenkinsBuild implements RequestHandlerInterface
 
         $jenkinsJob = $this->jenkinsJobRepository->getJobByFullRepositoryName($input['repository']['full_name']);
 
-        $this->validateRequest($request, $jenkinsJob['webhook_secret']);
+        if (!$this->githubWebhookRequestValidator->isValid($request)) {
+            throw new \Exception($this->githubWebhookRequestValidator->getMessages()[0]);
+        }
 
         $branch = $input['ref'];
 
@@ -79,32 +94,5 @@ final class TriggerJenkinsBuild implements RequestHandlerInterface
         $this->jenkinsManager->triggerBuild($job, $branch);
 
         return new JsonResponse([]);
-    }
-
-    /**
-     * @param ServerRequest|ServerRequestInterface $request
-     * @return bool
-     * @throws \Exception
-     */
-    private function validateRequest(ServerRequestInterface $request, string $hookSecret): bool
-    {
-        if (empty($request->getHeader('X-Hub-Signature'))) {
-            throw new \Exception('Http header \'X-Hub-Signature\' is missing.');
-        }
-
-        if (!extension_loaded('hash')) {
-            throw new \Exception("Missing 'hash' extension to check the secret code validity.");
-        }
-
-        list($algo, $hash) = explode('=', $request->getHeader('X-Hub-Signature')[0], 2) + ['', ''];
-        if (!in_array($algo, hash_algos(), TRUE)) {
-            throw new \Exception("Hash algorithm '$algo' is not supported.");
-        }
-        $rawPost = file_get_contents('php://input');
-        if ($hash !== hash_hmac($algo, $rawPost, $hookSecret)) {
-            throw new \Exception('Hook secret does not match.');
-        }
-
-        return true;
     }
 }
